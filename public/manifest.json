@@ -13,8 +13,8 @@
     "default_title": "Expenso",
     "default_icon": "Logo.png"
   },
-  "host_permissions": [
-    "https://*.supabase.co/*"
+  "permissions": [
+    "storage"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"

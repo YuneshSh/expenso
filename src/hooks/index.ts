@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { store } from '../lib/storage';
 import type { Category, Month, Budget, Expense } from '../types';
 
 export function useCategories() {
@@ -7,14 +7,10 @@ export function useCategories() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from('categories')
-      .select('*')
-      .order('sort_order')
-      .then(({ data }) => {
-        if (data) setCategories(data);
-        setLoading(false);
-      });
+    store.getCategories().then((data) => {
+      setCategories(data);
+      setLoading(false);
+    });
   }, []);
 
   return { categories, loading };
@@ -26,12 +22,7 @@ export function useMonth(year: number, month: number) {
 
   const fetchMonth = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('months')
-      .select('*')
-      .eq('year', year)
-      .eq('month', month)
-      .maybeSingle();
+    const data = await store.getMonth(year, month);
     setMonthData(data);
     setLoading(false);
   }, [year, month]);
@@ -40,22 +31,13 @@ export function useMonth(year: number, month: number) {
 
   const upsertMonth = async (income: number, budgetAmount?: number) => {
     if (monthData) {
-      const updates: Record<string, number> = { income };
+      const updates: Partial<Pick<Month, 'income' | 'budget_amount'>> = { income };
       if (budgetAmount !== undefined) updates.budget_amount = budgetAmount;
-      const { data } = await supabase
-        .from('months')
-        .update(updates)
-        .eq('id', monthData.id)
-        .select()
-        .single();
+      const data = await store.updateMonth(monthData.id, updates);
       if (data) setMonthData(data);
       return data;
     } else {
-      const { data } = await supabase
-        .from('months')
-        .insert({ year, month, income, budget_amount: budgetAmount ?? 0 })
-        .select()
-        .single();
+      const data = await store.insertMonth(year, month, income, budgetAmount ?? 0);
       if (data) setMonthData(data);
       return data;
     }
@@ -71,11 +53,8 @@ export function useBudgets(monthId: string | null) {
   const fetchBudgets = useCallback(async () => {
     if (!monthId) { setBudgets([]); return; }
     setLoading(true);
-    const { data } = await supabase
-      .from('budgets')
-      .select('*')
-      .eq('month_id', monthId);
-    if (data) setBudgets(data);
+    const data = await store.getBudgets(monthId);
+    setBudgets(data);
     setLoading(false);
   }, [monthId]);
 
@@ -85,19 +64,10 @@ export function useBudgets(monthId: string | null) {
     if (!monthId) return;
     const existing = budgets.find(b => b.category_id === categoryId);
     if (existing) {
-      const { data } = await supabase
-        .from('budgets')
-        .update({ expected_amount: expectedAmount })
-        .eq('id', existing.id)
-        .select()
-        .single();
+      const data = await store.updateBudget(existing.id, expectedAmount);
       if (data) setBudgets(prev => prev.map(b => b.id === data.id ? data : b));
     } else {
-      const { data } = await supabase
-        .from('budgets')
-        .insert({ month_id: monthId, category_id: categoryId, expected_amount: expectedAmount })
-        .select()
-        .single();
+      const data = await store.insertBudget(monthId, categoryId, expectedAmount);
       if (data) setBudgets(prev => [...prev, data]);
     }
   };
@@ -112,12 +82,8 @@ export function useExpenses(monthId: string | null) {
   const fetchExpenses = useCallback(async () => {
     if (!monthId) { setExpenses([]); return; }
     setLoading(true);
-    const { data } = await supabase
-      .from('expenses')
-      .select('*')
-      .eq('month_id', monthId)
-      .order('date', { ascending: false });
-    if (data) setExpenses(data);
+    const data = await store.getExpenses(monthId);
+    setExpenses(data);
     setLoading(false);
   }, [monthId]);
 
@@ -125,18 +91,14 @@ export function useExpenses(monthId: string | null) {
 
   const addExpense = async (categoryId: string, amount: number, description: string, date: string) => {
     if (!monthId) return null;
-    const { data, error } = await supabase
-      .from('expenses')
-      .insert({ month_id: monthId, category_id: categoryId, amount, description: description || null, date })
-      .select()
-      .single();
+    const data = await store.insertExpense(monthId, categoryId, amount, description, date);
     if (data) setExpenses(prev => [data, ...prev]);
-    return error ? null : data;
+    return data;
   };
 
   const deleteExpense = async (id: string) => {
-    const { error } = await supabase.from('expenses').delete().eq('id', id);
-    if (!error) setExpenses(prev => prev.filter(e => e.id !== id));
+    await store.deleteExpense(id);
+    setExpenses(prev => prev.filter(e => e.id !== id));
   };
 
   return { expenses, loading, addExpense, deleteExpense, refetch: fetchExpenses };
