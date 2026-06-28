@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Expenso",
+  "version": "1.0.0",
+  "description": "Elegant daily expense tracker — monitor income, budget categories, and spending trends.",
+  "icons": {
+    "16": "Logo.png",
+    "48": "Logo.png",
+    "128": "Logo.png"
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Expenso",
+    "default_icon": "Logo.png"
+  },
+  "host_permissions": [
+    "https://*.supabase.co/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
