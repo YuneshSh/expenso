@@ -132,7 +132,7 @@ export default function ExpensesList({ month, categories, budgets, expenses, onU
           const isOpen = expanded[group.category.id] !== false;
           const over = group.expected > 0 && group.total > group.expected;
           return (
-            <div key={group.category.id} className="glass rounded-2xl overflow-hidden">
+            <div key={group.category.id} className="glass rounded-2xl overflow-hidden flex-shrink-0">
               {/* Category header */}
               <button
                 className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-white/5 transition-colors"
