@@ -61,7 +61,9 @@ export default function ExpensesList({ month, categories, budgets, expenses, onU
 
   const totalSpent = useMemo(() => expenses.reduce((s, e) => s + Number(e.amount), 0), [expenses]);
 
-  const toggle = (id: string) => setExpanded(p => ({ ...p, [id]: !p[id] }));
+  // groups are open by default (expanded[id] === undefined), so toggle must
+  // flip relative to the *visible* state, not the raw stored value.
+  const toggle = (id: string) => setExpanded(p => ({ ...p, [id]: p[id] === false ? true : false }));
 
   const startEdit = (exp: Expense) => {
     setConfirmDelete(null);
@@ -230,18 +232,18 @@ export default function ExpensesList({ month, categories, budgets, expenses, onU
                             >Cancel</button>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-0.5 flex-shrink-0">
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
                             <button
                               onClick={() => startEdit(exp)}
                               title="Edit entry"
-                              className="p-1.5 rounded-lg text-white/45 hover:text-cyan-300 hover:bg-white/10 transition-colors"
+                              className="flex items-center justify-center w-7 h-7 rounded-lg text-cyan-300/90 bg-cyan-500/10 border border-cyan-500/25 hover:bg-cyan-500/25 hover:text-cyan-200 transition-colors"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => setConfirmDelete(exp.id)}
                               title="Delete entry"
-                              className="p-1.5 rounded-lg text-white/45 hover:text-red-400 hover:bg-white/10 transition-colors"
+                              className="flex items-center justify-center w-7 h-7 rounded-lg text-red-300/90 bg-red-500/10 border border-red-500/25 hover:bg-red-500/25 hover:text-red-200 transition-colors"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
