@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Save, Wallet, PiggyBank, CheckCircle2, XCircle } from 'lucide-react';
 import type { Category, Month, Budget, Expense } from '../types';
+import { fmtNum, toRaw, AMOUNT_RE, formatAmountInput } from '../lib/format';
 
 interface Props {
   year: number;
@@ -14,19 +15,6 @@ interface Props {
 }
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-const fmtNum = (n: number) =>
-  new Intl.NumberFormat('en-US').format(n);
-
-function toDisplay(raw: string): string {
-  const num = parseFloat(raw);
-  if (!raw || isNaN(num)) return raw;
-  return fmtNum(num);
-}
-
-function toRaw(display: string): string {
-  return display.replace(/,/g, '');
-}
 
 export default function BudgetSetup({ year, month, monthData, categories, budgets, expenses, onSaveIncome, onSaveBudget }: Props) {
   const paidCategoryIds = useMemo(() => new Set(expenses.map(e => e.category_id)), [expenses]);
@@ -54,8 +42,8 @@ export default function BudgetSetup({ year, month, monthData, categories, budget
 
   const handleNumChange = (value: string, setter: (v: string) => void) => {
     const raw = toRaw(value);
-    if (raw === '' || /^\d*\.?\d*$/.test(raw)) {
-      setter(raw === '' ? '' : toDisplay(raw));
+    if (raw === '' || AMOUNT_RE.test(raw)) {
+      setter(raw === '' ? '' : formatAmountInput(raw));
     }
   };
 
@@ -178,8 +166,8 @@ export default function BudgetSetup({ year, month, monthData, categories, budget
                 value={budgetValues[cat.id] ?? ''}
                 onChange={v => {
                   const raw = toRaw(v);
-                  if (raw === '' || /^\d*\.?\d*$/.test(raw)) {
-                    setBudgetValues(p => ({ ...p, [cat.id]: raw === '' ? '' : toDisplay(raw) }));
+                  if (raw === '' || AMOUNT_RE.test(raw)) {
+                    setBudgetValues(p => ({ ...p, [cat.id]: raw === '' ? '' : formatAmountInput(raw) }));
                   }
                 }}
                 onSave={() => handleSaveBudget(cat.id)}

@@ -1,35 +1,26 @@
 import { useState, FormEvent } from 'react';
-import { Plus, X, Calendar } from 'lucide-react';
+import { Plus, X, Calendar, Check } from 'lucide-react';
 import type { Category, Month } from '../types';
+import { fmtNum, toRaw, AMOUNT_RE, formatAmountInput } from '../lib/format';
 
 interface Props {
   month: Month | null;
   categories: Category[];
   onAdd: (categoryId: string, amount: number, description: string, date: string) => Promise<unknown>;
+  onAddCategory: (name: string, color: string) => Promise<Category>;
   onSetupFirst: () => void;
 }
 
-const fmtNum = (n: number) =>
-  new Intl.NumberFormat('en-US').format(n);
-
-function toDisplay(raw: string): string {
-  const num = parseFloat(raw);
-  if (!raw || isNaN(num)) return raw;
-  return fmtNum(num);
-}
-
-function toRaw(display: string): string {
-  return display.replace(/,/g, '');
-}
+const NEW_COLORS = ['#22d3ee', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#84cc16', '#fb923c', '#06b6d4'];
 
 function handleNumInput(value: string, setter: (v: string) => void) {
   const raw = toRaw(value);
-  if (raw === '' || /^\d*\.?\d*$/.test(raw)) {
-    setter(raw === '' ? '' : toDisplay(raw));
+  if (raw === '' || AMOUNT_RE.test(raw)) {
+    setter(raw === '' ? '' : formatAmountInput(raw));
   }
 }
 
-export default function AddExpense({ month, categories, onAdd, onSetupFirst }: Props) {
+export default function AddExpense({ month, categories, onAdd, onAddCategory, onSetupFirst }: Props) {
   const today = new Date().toISOString().split('T')[0];
   const [categoryId, setCategoryId] = useState('');
   const [amount, setAmount] = useState('');
@@ -39,10 +30,37 @@ export default function AddExpense({ month, categories, onAdd, onSetupFirst }: P
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
+  const [creatingCat, setCreatingCat] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatColor, setNewCatColor] = useState(NEW_COLORS[0]);
+  const [addingCat, setAddingCat] = useState(false);
+
   const [subEntries, setSubEntries] = useState<{ desc: string; amt: string }[]>([{ desc: '', amt: '' }]);
 
   const selectedCat = categories.find(c => c.id === categoryId);
   const isMulti = selectedCat?.allows_multiple ?? false;
+
+  const handleCreateCategory = async () => {
+    const name = newCatName.trim();
+    if (!name) { setError('Enter a category name'); return; }
+    if (categories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+      setError('That category already exists');
+      return;
+    }
+    setError('');
+    setAddingCat(true);
+    try {
+      const cat = await onAddCategory(name, newCatColor);
+      setCategoryId(cat.id);
+      setSubEntries([{ desc: '', amt: '' }]);
+      setCreatingCat(false);
+      setNewCatName('');
+      setNewCatColor(NEW_COLORS[0]);
+    } catch {
+      setError('Could not create category');
+    }
+    setAddingCat(false);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -112,22 +130,80 @@ export default function AddExpense({ month, categories, onAdd, onSetupFirst }: P
 
         {/* Category */}
         <div className="glass rounded-2xl p-3">
-          <label className="text-xs text-white/50 mb-1.5 block">Category</label>
-          <select
-            className="input-dark w-full rounded-xl px-3 py-2 text-sm"
-            value={categoryId}
-            onChange={e => { setCategoryId(e.target.value); setSubEntries([{ desc: '', amt: '' }]); }}
-          >
-            <option value="">Select category...</option>
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </select>
-          {selectedCat && (
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <div className="w-2 h-2 rounded-full" style={{ background: selectedCat.color }} />
-              <span className="text-xs text-white/40">{isMulti ? 'Multiple entries allowed' : 'Single entry'}</span>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs text-white/50 block">Category</label>
+            {!creatingCat && (
+              <button
+                type="button"
+                onClick={() => { setCreatingCat(true); setError(''); }}
+                className="flex items-center gap-1 text-[11px] text-cyan-400/80 hover:text-cyan-300 transition-colors"
+              >
+                <Plus className="w-3 h-3" /> New category
+              </button>
+            )}
+          </div>
+
+          {creatingCat ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  autoFocus
+                  className="input-dark flex-1 rounded-xl px-3 py-2 text-sm"
+                  placeholder="New category name"
+                  value={newCatName}
+                  onChange={e => setNewCatName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleCreateCategory())}
+                />
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {NEW_COLORS.map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setNewCatColor(c)}
+                    className={`w-5 h-5 rounded-full transition-transform ${newCatColor === c ? 'ring-2 ring-white/70 scale-110' : 'ring-1 ring-white/10'}`}
+                    style={{ background: c }}
+                  />
+                ))}
+              </div>
+              <div className="flex gap-2 justify-end mt-0.5">
+                <button
+                  type="button"
+                  onClick={() => { setCreatingCat(false); setNewCatName(''); setError(''); }}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs text-white/50 hover:text-white/80 hover:bg-white/5 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" /> Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={addingCat}
+                  onClick={handleCreateCategory}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-cyan-300 bg-cyan-500/15 border border-cyan-500/30 hover:bg-cyan-500/25 transition-colors disabled:opacity-50"
+                >
+                  <Check className="w-3.5 h-3.5" /> {addingCat ? 'Adding…' : 'Add & select'}
+                </button>
+              </div>
             </div>
+          ) : (
+            <>
+              <select
+                className="input-dark w-full rounded-xl px-3 py-2 text-sm"
+                value={categoryId}
+                onChange={e => { setCategoryId(e.target.value); setSubEntries([{ desc: '', amt: '' }]); }}
+              >
+                <option value="">Select category...</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+              {selectedCat && (
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <div className="w-2 h-2 rounded-full" style={{ background: selectedCat.color }} />
+                  <span className="text-xs text-white/40">{isMulti ? 'Multiple entries allowed' : 'Single entry'}</span>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -153,8 +229,8 @@ export default function AddExpense({ month, categories, onAdd, onSetupFirst }: P
                     value={entry.amt}
                     onChange={e => {
                       const raw = toRaw(e.target.value);
-                      if (raw === '' || /^\d*\.?\d*$/.test(raw)) {
-                        setSubEntries(p => p.map((x, j) => j === i ? { ...x, amt: raw === '' ? '' : toDisplay(raw) } : x));
+                      if (raw === '' || AMOUNT_RE.test(raw)) {
+                        setSubEntries(p => p.map((x, j) => j === i ? { ...x, amt: raw === '' ? '' : formatAmountInput(raw) } : x));
                       }
                     }}
                   />

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Trash2, ChevronDown, ChevronRight, Search, Pencil, Check, X } from 'lucide-react';
 import type { Category, Month, Budget, Expense } from '../types';
+import { fmtFull, toRaw, AMOUNT_RE, formatAmountInput, amountToInput } from '../lib/format';
 
 interface Props {
   month: Month | null;
@@ -12,17 +13,6 @@ interface Props {
     updates: Partial<Pick<Expense, 'category_id' | 'amount' | 'description' | 'date'>>
   ) => Promise<Expense | null>;
   onDelete: (id: string) => void;
-}
-
-const fmtFull = (n: number) =>
-  new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
-const fmtNum = (n: number) => new Intl.NumberFormat('en-US').format(n);
-
-const toRaw = (display: string) => display.replace(/,/g, '');
-function toDisplay(raw: string): string {
-  const num = parseFloat(raw);
-  if (!raw || isNaN(num)) return raw;
-  return fmtNum(num);
 }
 
 interface EditDraft {
@@ -70,7 +60,7 @@ export default function ExpensesList({ month, categories, budgets, expenses, onU
     setEditingId(exp.id);
     setDraft({
       category_id: exp.category_id,
-      amount: fmtNum(Number(exp.amount)),
+      amount: amountToInput(Number(exp.amount)),
       description: exp.description ?? '',
       date: exp.date,
     });
@@ -178,8 +168,8 @@ export default function ExpensesList({ month, categories, budgets, expenses, onU
                             value={draft.amount}
                             onChange={e => {
                               const raw = toRaw(e.target.value);
-                              if (raw === '' || /^\d*\.?\d*$/.test(raw)) {
-                                setDraft({ ...draft, amount: raw === '' ? '' : toDisplay(raw) });
+                              if (raw === '' || AMOUNT_RE.test(raw)) {
+                                setDraft({ ...draft, amount: raw === '' ? '' : formatAmountInput(raw) });
                               }
                             }}
                           />

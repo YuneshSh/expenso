@@ -6,14 +6,40 @@ export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    store.getCategories().then((data) => {
-      setCategories(data);
-      setLoading(false);
-    });
+  const refetch = useCallback(async () => {
+    const data = await store.getCategories();
+    setCategories(data);
+    setLoading(false);
   }, []);
 
-  return { categories, loading };
+  useEffect(() => { refetch(); }, [refetch]);
+
+  const addCategory = async (name: string, color: string, allowsMultiple = false) => {
+    const cat = await store.insertCategory(name, color, allowsMultiple);
+    setCategories(prev => [...prev, cat].sort((a, b) => a.sort_order - b.sort_order));
+    return cat;
+  };
+
+  const updateCategory = async (
+    id: string,
+    updates: Partial<Pick<Category, 'name' | 'color' | 'allows_multiple'>>
+  ) => {
+    const cat = await store.updateCategory(id, updates);
+    if (cat) setCategories(prev => prev.map(c => (c.id === cat.id ? cat : c)));
+    return cat;
+  };
+
+  const deleteCategory = async (id: string) => {
+    await store.deleteCategory(id);
+    setCategories(prev => prev.filter(c => c.id !== id));
+  };
+
+  const resetCategories = async () => {
+    const data = await store.resetCategories();
+    setCategories([...data].sort((a, b) => a.sort_order - b.sort_order));
+  };
+
+  return { categories, loading, addCategory, updateCategory, deleteCategory, resetCategories, refetch };
 }
 
 export function useMonth(year: number, month: number) {

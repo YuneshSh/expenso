@@ -1,9 +1,10 @@
 import { useState, useCallback, ReactNode } from 'react';
-import { LayoutDashboard, Target, Plus, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Target, Plus, List, Settings as SettingsIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import BudgetSetup from './components/BudgetSetup';
 import AddExpense from './components/AddExpense';
 import ExpensesList from './components/ExpensesList';
+import Settings from './components/Settings';
 import { useCategories, useMonth, useBudgets, useExpenses } from './hooks';
 import type { View } from './types';
 
@@ -15,10 +16,10 @@ export default function App() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [view, setView] = useState<View>('dashboard');
 
-  const { categories } = useCategories();
+  const { categories, addCategory, updateCategory, deleteCategory, resetCategories } = useCategories();
   const { monthData, upsertMonth } = useMonth(year, month);
-  const { budgets, upsertBudget } = useBudgets(monthData?.id ?? null);
-  const { expenses, addExpense, updateExpense, deleteExpense } = useExpenses(monthData?.id ?? null);
+  const { budgets, upsertBudget, refetch: refetchBudgets } = useBudgets(monthData?.id ?? null);
+  const { expenses, addExpense, updateExpense, deleteExpense, refetch: refetchExpenses } = useExpenses(monthData?.id ?? null);
 
   const prevMonth = () => {
     if (month === 1) { setMonth(12); setYear(y => y - 1); }
@@ -52,11 +53,24 @@ export default function App() {
     return addExpense(categoryId, amount, description, date);
   }, [monthData, upsertMonth, addExpense]);
 
+  // Deleting/resetting categories cascades to budgets & expenses, so refresh
+  // the current month's data afterwards to keep the UI in sync.
+  const handleDeleteCategory = useCallback(async (id: string) => {
+    await deleteCategory(id);
+    await Promise.all([refetchBudgets(), refetchExpenses()]);
+  }, [deleteCategory, refetchBudgets, refetchExpenses]);
+
+  const handleResetCategories = useCallback(async () => {
+    await resetCategories();
+    await Promise.all([refetchBudgets(), refetchExpenses()]);
+  }, [resetCategories, refetchBudgets, refetchExpenses]);
+
   const tabs: { id: View; icon: ReactNode; label: string }[] = [
     { id: 'dashboard', icon: <LayoutDashboard className="w-4 h-4" />, label: 'Overview' },
     { id: 'budget',    icon: <Target className="w-4 h-4" />,           label: 'Budget' },
     { id: 'add',       icon: <Plus className="w-4 h-4" />,             label: 'Add' },
     { id: 'expenses',  icon: <List className="w-4 h-4" />,             label: 'History' },
+    { id: 'settings',  icon: <SettingsIcon className="w-4 h-4" />,     label: 'Settings' },
   ];
 
   return (
@@ -72,10 +86,7 @@ export default function App() {
       <header className="flex-shrink-0 px-4 pt-3 pb-2.5 flex items-center justify-between relative z-10"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(7,11,20,0.6)', backdropFilter: 'blur(12px)' }}>
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, rgba(34,211,238,0.12), rgba(16,185,129,0.12))', border: '1px solid rgba(34,211,238,0.2)' }}>
-            <span className="text-sm font-bold gradient-text">E</span>
-          </div>
+          <img src="icon-48.png" alt="Expenso" className="w-8 h-8 rounded-full" />
           <div>
             <span className="text-sm font-bold text-white tracking-tight">Expenso</span>
             <span className="text-[10px] text-white/25 ml-1.5 font-light">tracker</span>
@@ -124,6 +135,7 @@ export default function App() {
             month={monthData}
             categories={categories}
             onAdd={handleAddExpense}
+            onAddCategory={addCategory}
             onSetupFirst={() => setView('budget')}
           />
         )}
@@ -135,6 +147,15 @@ export default function App() {
             expenses={expenses}
             onUpdate={updateExpense}
             onDelete={deleteExpense}
+          />
+        )}
+        {view === 'settings' && (
+          <Settings
+            categories={categories}
+            onAddCategory={addCategory}
+            onUpdateCategory={updateCategory}
+            onDeleteCategory={handleDeleteCategory}
+            onResetCategories={handleResetCategories}
           />
         )}
       </main>

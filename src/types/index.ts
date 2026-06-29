@@ -43,4 +43,4 @@ export interface CategorySummary {
   entries: Expense[];
 }
 
-export type View = 'dashboard' | 'budget' | 'add' | 'expenses';
+export type View = 'dashboard' | 'budget' | 'add' | 'expenses' | 'settings';

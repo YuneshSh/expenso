@@ -74,15 +74,9 @@ async function loadDB(): Promise<DB> {
     await writeRaw(fresh);
     return fresh;
   }
-  // Make sure any newly-added default categories appear for older installs.
-  const known = new Set(existing.categories.map((c) => c.id));
-  const missing = DEFAULT_CATEGORIES.filter((c) => !known.has(c.id));
-  if (missing.length > 0) {
-    existing.categories = [...existing.categories, ...missing].sort(
-      (a, b) => a.sort_order - b.sort_order
-    );
-    await writeRaw(existing);
-  }
+  // Note: we intentionally do NOT re-add missing default categories here.
+  // Users can customise their category set (add/edit/delete) in Settings, and
+  // deleted categories must stay deleted across reloads.
   return existing;
 }
 
@@ -90,6 +84,60 @@ export const store = {
   async getCategories(): Promise<Category[]> {
     const db = await loadDB();
     return [...db.categories].sort((a, b) => a.sort_order - b.sort_order);
+  },
+
+  async insertCategory(
+    name: string,
+    color: string,
+    allowsMultiple = false
+  ): Promise<Category> {
+    const db = await loadDB();
+    const maxSort = db.categories.reduce((m, c) => Math.max(m, c.sort_order), 0);
+    const record: Category = {
+      id: uuid(),
+      name: name.trim(),
+      icon: 'circle',
+      color,
+      allows_multiple: allowsMultiple,
+      is_extra: false,
+      sort_order: maxSort + 1,
+      created_at: now(),
+    };
+    db.categories.push(record);
+    await writeRaw(db);
+    return record;
+  },
+
+  async updateCategory(
+    id: string,
+    updates: Partial<Pick<Category, 'name' | 'color' | 'allows_multiple'>>
+  ): Promise<Category | null> {
+    const db = await loadDB();
+    const c = db.categories.find((x) => x.id === id);
+    if (!c) return null;
+    if (updates.name !== undefined) c.name = updates.name.trim();
+    if (updates.color !== undefined) c.color = updates.color;
+    if (updates.allows_multiple !== undefined) c.allows_multiple = updates.allows_multiple;
+    await writeRaw(db);
+    return c;
+  },
+
+  // Deleting a category also removes any budgets and expenses that reference it
+  // (across every month), so no orphaned records are left behind.
+  async deleteCategory(id: string): Promise<void> {
+    const db = await loadDB();
+    db.categories = db.categories.filter((c) => c.id !== id);
+    db.budgets = db.budgets.filter((b) => b.category_id !== id);
+    db.expenses = db.expenses.filter((e) => e.category_id !== id);
+    await writeRaw(db);
+  },
+
+  // Replace the whole category set with the built-in defaults.
+  async resetCategories(): Promise<Category[]> {
+    const db = await loadDB();
+    db.categories = DEFAULT_CATEGORIES.map((c) => ({ ...c, created_at: now() }));
+    await writeRaw(db);
+    return [...db.categories];
   },
 
   async getMonth(year: number, month: number): Promise<Month | null> {

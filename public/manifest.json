@@ -4,14 +4,20 @@
   "version": "1.0.0",
   "description": "Elegant daily expense tracker — monitor income, budget categories, and spending trends.",
   "icons": {
-    "16": "Logo.png",
-    "48": "Logo.png",
-    "128": "Logo.png"
+    "16": "icon-16.png",
+    "32": "icon-32.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
   },
   "action": {
     "default_popup": "index.html",
     "default_title": "Expenso",
-    "default_icon": "Logo.png"
+    "default_icon": {
+      "16": "icon-16.png",
+      "32": "icon-32.png",
+      "48": "icon-48.png",
+      "128": "icon-128.png"
+    }
   },
   "permissions": [
     "storage"
