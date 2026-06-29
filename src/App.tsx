@@ -86,7 +86,7 @@ export default function App() {
       <header className="flex-shrink-0 px-4 pt-3 pb-2.5 flex items-center justify-between relative z-10"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(7,11,20,0.6)', backdropFilter: 'blur(12px)' }}>
         <div className="flex items-center gap-2.5">
-          <img src="icon-48.png" alt="Expenso" className="w-8 h-8 rounded-full" />
+          <img src="icons/icon48.png" alt="Expenso" className="w-8 h-8" />
           <div>
             <span className="text-sm font-bold text-white tracking-tight">Expenso</span>
             <span className="text-[10px] text-white/25 ml-1.5 font-light">tracker</span>
