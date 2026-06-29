@@ -18,7 +18,7 @@ export default function App() {
   const { categories } = useCategories();
   const { monthData, upsertMonth } = useMonth(year, month);
   const { budgets, upsertBudget } = useBudgets(monthData?.id ?? null);
-  const { expenses, addExpense, deleteExpense } = useExpenses(monthData?.id ?? null);
+  const { expenses, addExpense, updateExpense, deleteExpense } = useExpenses(monthData?.id ?? null);
 
   const prevMonth = () => {
     if (month === 1) { setMonth(12); setYear(y => y - 1); }
@@ -114,6 +114,7 @@ export default function App() {
             monthData={monthData}
             categories={categories}
             budgets={budgets}
+            expenses={expenses}
             onSaveIncome={handleSaveIncome}
             onSaveBudget={handleSaveBudget}
           />
@@ -132,6 +133,7 @@ export default function App() {
             categories={categories}
             budgets={budgets}
             expenses={expenses}
+            onUpdate={updateExpense}
             onDelete={deleteExpense}
           />
         )}

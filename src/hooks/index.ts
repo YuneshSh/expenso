@@ -96,10 +96,25 @@ export function useExpenses(monthId: string | null) {
     return data;
   };
 
+  const updateExpense = async (
+    id: string,
+    updates: Partial<Pick<Expense, 'category_id' | 'amount' | 'description' | 'date'>>
+  ) => {
+    const data = await store.updateExpense(id, updates);
+    if (data) {
+      setExpenses(prev =>
+        prev
+          .map(e => (e.id === data.id ? data : e))
+          .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+      );
+    }
+    return data;
+  };
+
   const deleteExpense = async (id: string) => {
     await store.deleteExpense(id);
     setExpenses(prev => prev.filter(e => e.id !== id));
   };
 
-  return { expenses, loading, addExpense, deleteExpense, refetch: fetchExpenses };
+  return { expenses, loading, addExpense, updateExpense, deleteExpense, refetch: fetchExpenses };
 }

@@ -178,6 +178,21 @@ export const store = {
     return record;
   },
 
+  async updateExpense(
+    id: string,
+    updates: Partial<Pick<Expense, 'category_id' | 'amount' | 'description' | 'date'>>
+  ): Promise<Expense | null> {
+    const db = await loadDB();
+    const e = db.expenses.find((x) => x.id === id);
+    if (!e) return null;
+    if (updates.category_id !== undefined) e.category_id = updates.category_id;
+    if (updates.amount !== undefined) e.amount = updates.amount;
+    if (updates.description !== undefined) e.description = updates.description || null;
+    if (updates.date !== undefined) e.date = updates.date;
+    await writeRaw(db);
+    return e;
+  },
+
   async deleteExpense(id: string): Promise<void> {
     const db = await loadDB();
     db.expenses = db.expenses.filter((e) => e.id !== id);

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Save, Wallet, PiggyBank } from 'lucide-react';
-import type { Category, Month, Budget } from '../types';
+import { useState, useEffect, useMemo } from 'react';
+import { Save, Wallet, PiggyBank, CheckCircle2, XCircle } from 'lucide-react';
+import type { Category, Month, Budget, Expense } from '../types';
 
 interface Props {
   year: number;
@@ -8,6 +8,7 @@ interface Props {
   monthData: Month | null;
   categories: Category[];
   budgets: Budget[];
+  expenses: Expense[];
   onSaveIncome: (income: number, budgetAmount: number) => Promise<void>;
   onSaveBudget: (categoryId: string, amount: number) => Promise<void>;
 }
@@ -27,7 +28,8 @@ function toRaw(display: string): string {
   return display.replace(/,/g, '');
 }
 
-export default function BudgetSetup({ year, month, monthData, categories, budgets, onSaveIncome, onSaveBudget }: Props) {
+export default function BudgetSetup({ year, month, monthData, categories, budgets, expenses, onSaveIncome, onSaveBudget }: Props) {
+  const paidCategoryIds = useMemo(() => new Set(expenses.map(e => e.category_id)), [expenses]);
   const [income, setIncome] = useState('');
   const [budgetAmount, setBudgetAmount] = useState('');
   const [budgetValues, setBudgetValues] = useState<Record<string, string>>({});
@@ -156,12 +158,23 @@ export default function BudgetSetup({ year, month, monthData, categories, budget
 
         {/* Category budgets */}
         <div className="glass rounded-2xl p-4">
-          <p className="text-xs text-white/60 font-medium mb-3">Category Allocations</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs text-white/60 font-medium">Category Allocations</p>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1 text-[10px] text-white/40">
+                <CheckCircle2 className="w-3 h-3 text-emerald-400" /> paid
+              </span>
+              <span className="flex items-center gap-1 text-[10px] text-white/40">
+                <XCircle className="w-3 h-3 text-white/30" /> none
+              </span>
+            </div>
+          </div>
           <div className="flex flex-col gap-2.5">
             {categories.map(cat => (
               <CategoryRow
                 key={cat.id}
                 category={cat}
+                paid={paidCategoryIds.has(cat.id)}
                 value={budgetValues[cat.id] ?? ''}
                 onChange={v => {
                   const raw = toRaw(v);
@@ -210,8 +223,9 @@ export default function BudgetSetup({ year, month, monthData, categories, budget
   );
 }
 
-function CategoryRow({ category, value, onChange, onSave, saving, saved }: {
+function CategoryRow({ category, paid, value, onChange, onSave, saving, saved }: {
   category: Category;
+  paid: boolean;
   value: string;
   onChange: (v: string) => void;
   onSave: () => void;
@@ -220,8 +234,13 @@ function CategoryRow({ category, value, onChange, onSave, saving, saved }: {
 }) {
   return (
     <div className="flex items-center gap-2.5">
+      {paid ? (
+        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+      ) : (
+        <XCircle className="w-3.5 h-3.5 text-white/25 flex-shrink-0" />
+      )}
       <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: category.color }} />
-      <span className="text-xs text-white/70 w-24 flex-shrink-0 truncate">{category.name}</span>
+      <span className="text-xs text-white/70 w-20 flex-shrink-0 truncate">{category.name}</span>
       <input
         type="text"
         inputMode="numeric"
