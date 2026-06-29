@@ -23,6 +23,16 @@ export default function BudgetSetup({ year, month, monthData, categories, budget
   const [budgetValues, setBudgetValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [savedMap, setSavedMap] = useState<Record<string, boolean>>({});
+  const [filter, setFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
+
+  const visibleCategories = useMemo(() => {
+    if (filter === 'all') return categories;
+    return categories.filter(cat =>
+      filter === 'paid' ? paidCategoryIds.has(cat.id) : !paidCategoryIds.has(cat.id)
+    );
+  }, [categories, filter, paidCategoryIds]);
+
+  const toggleFilter = (f: 'paid' | 'unpaid') => setFilter(prev => (prev === f ? 'all' : f));
 
   useEffect(() => {
     const inc = monthData?.income;
@@ -148,17 +158,43 @@ export default function BudgetSetup({ year, month, monthData, categories, budget
         <div className="glass rounded-2xl p-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs text-white/60 font-medium">Category Allocations</p>
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1 text-[10px] text-white/40">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => toggleFilter('paid')}
+                title="Show paid categories"
+                className={`flex items-center gap-1 text-[10px] rounded-full px-2 py-1 border transition-colors ${
+                  filter === 'paid'
+                    ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/40'
+                    : 'text-white/40 bg-white/[0.03] border-white/10 hover:bg-white/[0.06]'
+                }`}
+              >
                 <CheckCircle2 className="w-3 h-3 text-emerald-400" /> paid
-              </span>
-              <span className="flex items-center gap-1 text-[10px] text-white/40">
-                <XCircle className="w-3 h-3 text-white/30" /> none
-              </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleFilter('unpaid')}
+                title="Show unpaid categories"
+                className={`flex items-center gap-1 text-[10px] rounded-full px-2 py-1 border transition-colors ${
+                  filter === 'unpaid'
+                    ? 'text-red-300 bg-red-500/15 border-red-500/40'
+                    : 'text-white/40 bg-white/[0.03] border-white/10 hover:bg-white/[0.06]'
+                }`}
+              >
+                <XCircle className="w-3 h-3 text-white/40" /> unpaid
+              </button>
             </div>
           </div>
+          {filter !== 'all' && (
+            <p className="text-[10px] text-white/35 mb-2 -mt-1">
+              Showing {filter} categories · <button type="button" onClick={() => setFilter('all')} className="text-cyan-400/80 hover:text-cyan-300">show all</button>
+            </p>
+          )}
           <div className="flex flex-col gap-2.5">
-            {categories.map(cat => (
+            {visibleCategories.length === 0 && (
+              <p className="text-white/40 text-xs text-center py-2">No {filter} categories.</p>
+            )}
+            {visibleCategories.map(cat => (
               <CategoryRow
                 key={cat.id}
                 category={cat}
