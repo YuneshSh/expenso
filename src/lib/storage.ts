@@ -17,6 +17,51 @@ interface DB {
   expenses: Expense[];
 }
 
+export interface ExpensoBackup {
+  format: 'expenso-backup';
+  version: 1;
+  exportedAt: string;
+  data: DB;
+}
+
+function isDB(value: unknown): value is DB {
+  if (!value || typeof value !== 'object') return false;
+  const d = value as Record<string, unknown>;
+  return (
+    Array.isArray(d.categories) &&
+    Array.isArray(d.months) &&
+    Array.isArray(d.budgets) &&
+    Array.isArray(d.expenses)
+  );
+}
+
+export function parseBackup(raw: unknown): ExpensoBackup {
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('Invalid backup file');
+  }
+  const b = raw as Record<string, unknown>;
+  if (b.format !== 'expenso-backup') {
+    throw new Error('Not an Expenso backup file');
+  }
+  if (b.version !== 1) {
+    throw new Error('Unsupported backup version');
+  }
+  if (!isDB(b.data)) {
+    throw new Error('Backup is missing required data');
+  }
+  return {
+    format: 'expenso-backup',
+    version: 1,
+    exportedAt: typeof b.exportedAt === 'string' ? b.exportedAt : now(),
+    data: {
+      categories: b.data.categories,
+      months: b.data.months,
+      budgets: b.data.budgets,
+      expenses: b.data.expenses,
+    },
+  };
+}
+
 // chrome.* is only present inside the extension; type it loosely to avoid @types/chrome.
 const chromeApi: any = (globalThis as any).chrome;
 const hasChromeStorage = !!(chromeApi && chromeApi.storage && chromeApi.storage.local);
@@ -245,5 +290,25 @@ export const store = {
     const db = await loadDB();
     db.expenses = db.expenses.filter((e) => e.id !== id);
     await writeRaw(db);
+  },
+
+  async exportDB(): Promise<ExpensoBackup> {
+    const data = await loadDB();
+    return {
+      format: 'expenso-backup',
+      version: 1,
+      exportedAt: now(),
+      data: {
+        categories: [...data.categories],
+        months: [...data.months],
+        budgets: [...data.budgets],
+        expenses: [...data.expenses],
+      },
+    };
+  },
+
+  async importDB(backup: unknown): Promise<void> {
+    const parsed = parseBackup(backup);
+    await writeRaw(parsed.data);
   },
 };

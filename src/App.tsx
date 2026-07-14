@@ -6,6 +6,8 @@ import AddExpense from './components/AddExpense';
 import ExpensesList from './components/ExpensesList';
 import Settings from './components/Settings';
 import { useCategories, useMonth, useBudgets, useExpenses } from './hooks';
+import { store } from './lib/storage';
+import type { ExpensoBackup } from './lib/storage';
 import type { View } from './types';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -64,6 +66,14 @@ export default function App() {
     await resetCategories();
     await Promise.all([refetchBudgets(), refetchExpenses()]);
   }, [resetCategories, refetchBudgets, refetchExpenses]);
+
+  const handleExport = useCallback(async () => store.exportDB(), []);
+
+  const handleImport = useCallback(async (backup: ExpensoBackup) => {
+    await store.importDB(backup);
+    // Full reload so every hook picks up the replaced database (month IDs included).
+    window.location.reload();
+  }, []);
 
   const tabs: { id: View; icon: ReactNode; label: string }[] = [
     { id: 'dashboard', icon: <LayoutDashboard className="w-4 h-4" />, label: 'Overview' },
@@ -156,6 +166,8 @@ export default function App() {
             onUpdateCategory={updateCategory}
             onDeleteCategory={handleDeleteCategory}
             onResetCategories={handleResetCategories}
+            onExport={handleExport}
+            onImport={handleImport}
           />
         )}
       </main>
