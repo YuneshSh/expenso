@@ -32,21 +32,27 @@ export default function ExpensesList({ month, categories, budgets, expenses, onU
   const grouped = useMemo(() => {
     return categories
       .map(cat => {
-        const catExpenses = expenses.filter(e => {
-          if (e.category_id !== cat.id) return false;
-          if (!search) return true;
-          const q = search.toLowerCase();
-          return (
-            cat.name.toLowerCase().includes(q) ||
-            (e.description ?? '').toLowerCase().includes(q) ||
-            e.amount.toString().includes(q)
-          );
-        });
+        const catExpenses = expenses
+          .filter(e => {
+            if (e.category_id !== cat.id) return false;
+            if (!search) return true;
+            const q = search.toLowerCase();
+            return (
+              cat.name.toLowerCase().includes(q) ||
+              (e.description ?? '').toLowerCase().includes(q) ||
+              e.amount.toString().includes(q)
+            );
+          })
+          // Newest entries first within each category
+          .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
         const budget = budgets.find(b => b.category_id === cat.id);
         const total = catExpenses.reduce((s, e) => s + Number(e.amount), 0);
-        return { category: cat, expenses: catExpenses, total, expected: Number(budget?.expected_amount ?? 0) };
+        const latestDate = catExpenses[0]?.date ?? '';
+        return { category: cat, expenses: catExpenses, total, expected: Number(budget?.expected_amount ?? 0), latestDate };
       })
-      .filter(g => g.expenses.length > 0);
+      .filter(g => g.expenses.length > 0)
+      // Categories with the most recent expense first
+      .sort((a, b) => (a.latestDate < b.latestDate ? 1 : a.latestDate > b.latestDate ? -1 : 0));
   }, [categories, budgets, expenses, search]);
 
   const totalSpent = useMemo(() => expenses.reduce((s, e) => s + Number(e.amount), 0), [expenses]);
