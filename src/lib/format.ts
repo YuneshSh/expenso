@@ -42,3 +42,17 @@ export function formatAmountInput(raw: string): string {
 export function amountToInput(value: number): string {
   return formatAmountInput(String(value));
 }
+
+/** Prefix an amount with the currency code, e.g. "USD 1,234.50". */
+export function money(amount: number, currency: string, decimals = true): string {
+  return `${currency} ${decimals ? fmtFull(amount) : fmtNum(amount)}`;
+}
+
+/** Compact amount with currency, e.g. "USD 917K". */
+export function moneyCompact(amount: number, currency: string): string {
+  let compact: string;
+  if (amount >= 100000) compact = `${(amount / 1000).toFixed(0)}K`;
+  else if (amount >= 1000) compact = new Intl.NumberFormat('en-US').format(Math.round(amount));
+  else compact = amount.toFixed(0);
+  return `${currency} ${compact}`;
+}

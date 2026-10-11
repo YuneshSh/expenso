@@ -1,12 +1,14 @@
 import { useMemo, ReactNode } from 'react';
 import { Wallet, AlertCircle, CheckCircle, PiggyBank, Receipt } from 'lucide-react';
 import type { Category, Month, Budget, Expense } from '../types';
+import { money } from '../lib/format';
 
 interface Props {
   month: Month | null;
   categories: Category[];
   budgets: Budget[];
   expenses: Expense[];
+  currency: string;
   onSetupMonth: () => void;
 }
 
@@ -16,10 +18,7 @@ const fmtCompact = (n: number) => {
   return n.toFixed(0);
 };
 
-const fmtFull = (n: number) =>
-  new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n);
-
-export default function Dashboard({ month, categories, budgets, expenses, onSetupMonth }: Props) {
+export default function Dashboard({ month, categories, budgets, expenses, currency, onSetupMonth }: Props) {
   const totalActual = useMemo(() => expenses.reduce((s, e) => s + Number(e.amount), 0), [expenses]);
   const budgetAmount = month?.budget_amount ?? 0;
   const remaining = budgetAmount - totalActual;
@@ -80,7 +79,7 @@ export default function Dashboard({ month, categories, budgets, expenses, onSetu
             <PiggyBank className="w-4 h-4 text-cyan-400" />
             <span className="text-xs text-white/60 font-medium">Monthly Budget</span>
           </div>
-          <span className="text-xs text-white/50 font-medium">LKR {fmtFull(budgetAmount)}</span>
+          <span className="text-xs text-white/50 font-medium">{money(budgetAmount, currency)}</span>
         </div>
 
         {/* Percentage + Remaining */}
@@ -93,7 +92,7 @@ export default function Dashboard({ month, categories, budgets, expenses, onSetu
           </div>
           <div className="text-right">
             <p className={`text-lg font-semibold ${remaining >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              LKR {fmtFull(Math.abs(remaining))}
+              {money(Math.abs(remaining), currency)}
             </p>
             <p className="text-xs text-white/40">{remaining >= 0 ? 'remaining' : 'over budget'}</p>
           </div>
@@ -114,29 +113,29 @@ export default function Dashboard({ month, categories, budgets, expenses, onSetu
           />
         </div>
         <div className="flex justify-between mt-2 text-xs text-white/30">
-          <span>LKR {fmtFull(totalActual)} spent</span>
-          <span>LKR {fmtFull(budgetAmount)} budget</span>
+          <span>{money(totalActual, currency)} spent</span>
+          <span>{money(budgetAmount, currency)} budget</span>
         </div>
       </div>
 
       {/* KPI strip */}
       <div className="grid grid-cols-3 gap-2">
         <StatCard
-          label="Income"
+          label={`Income (${currency})`}
           value={fmtCompact(month.income)}
           icon={<Wallet className="w-3.5 h-3.5" />}
           color="text-cyan-400"
           bg="from-cyan-500/8 to-cyan-500/3"
         />
         <StatCard
-          label="Expensed"
+          label={`Expensed (${currency})`}
           value={fmtCompact(totalActual)}
           icon={<Receipt className="w-3.5 h-3.5" />}
           color="text-rose-400"
           bg="from-rose-500/8 to-rose-500/3"
         />
         <StatCard
-          label="Remaining"
+          label={`Remaining (${currency})`}
           value={fmtCompact(Math.abs(remaining))}
           icon={remaining >= 0 ? <PiggyBank className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
           color={remaining >= 0 ? 'text-emerald-400' : 'text-red-400'}
@@ -252,13 +251,13 @@ export default function Dashboard({ month, categories, budgets, expenses, onSetu
         <div className="flex justify-between text-xs mb-1.5">
           <span className="text-white/50">Savings (Income - Expenses)</span>
           <span className={`font-semibold ${(month.income - totalActual) >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
-            LKR {fmtFull(Math.abs(month.income - totalActual))}
+            {money(Math.abs(month.income - totalActual), currency)}
           </span>
         </div>
         <div className="flex justify-between text-xs">
           <span className="text-white/50">Over Budget Spending</span>
           <span className="text-amber-400 font-medium">
-            LKR {fmtFull(Math.max(0, totalActual - budgetAmount))}
+            {money(Math.max(0, totalActual - budgetAmount), currency)}
           </span>
         </div>
       </div>

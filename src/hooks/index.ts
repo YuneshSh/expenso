@@ -1,6 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import { store } from '../lib/storage';
+import { DEFAULT_CURRENCY } from '../lib/currencies';
 import type { Category, Month, Budget, Expense } from '../types';
+
+export function useCurrency() {
+  const [currency, setCurrencyState] = useState(DEFAULT_CURRENCY);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    store.getCurrency().then((code) => {
+      setCurrencyState(code);
+      setLoading(false);
+    });
+  }, []);
+
+  const setCurrency = async (code: string) => {
+    const saved = await store.setCurrency(code);
+    setCurrencyState(saved);
+    return saved;
+  };
+
+  return { currency, setCurrency, loading };
+}
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);

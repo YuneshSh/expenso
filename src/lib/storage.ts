@@ -1,4 +1,5 @@
 import type { Category, Month, Budget, Expense } from '../types';
+import { DEFAULT_CURRENCY } from './currencies';
 
 /**
  * Local, backend-free persistence for the Expenso extension.
@@ -11,6 +12,7 @@ import type { Category, Month, Budget, Expense } from '../types';
 const KEY = 'expenso_db_v1';
 
 interface DB {
+  currency?: string;
   categories: Category[];
   months: Month[];
   budgets: Budget[];
@@ -49,11 +51,17 @@ export function parseBackup(raw: unknown): ExpensoBackup {
   if (!isDB(b.data)) {
     throw new Error('Backup is missing required data');
   }
+  const currency =
+    typeof (b.data as DB).currency === 'string' && (b.data as DB).currency
+      ? (b.data as DB).currency
+      : DEFAULT_CURRENCY;
+
   return {
     format: 'expenso-backup',
     version: 1,
     exportedAt: typeof b.exportedAt === 'string' ? b.exportedAt : now(),
     data: {
+      currency,
       categories: b.data.categories,
       months: b.data.months,
       budgets: b.data.budgets,
@@ -92,7 +100,13 @@ const DEFAULT_CATEGORIES: Category[] = [
 ].map((c) => ({ ...c, id: `cat-${c.sort_order}`, created_at: now() }));
 
 function emptyDB(): DB {
-  return { categories: [...DEFAULT_CATEGORIES], months: [], budgets: [], expenses: [] };
+  return {
+    currency: DEFAULT_CURRENCY,
+    categories: [...DEFAULT_CATEGORIES],
+    months: [],
+    budgets: [],
+    expenses: [],
+  };
 }
 
 async function readRaw(): Promise<DB | null> {
@@ -122,10 +136,26 @@ async function loadDB(): Promise<DB> {
   // Note: we intentionally do NOT re-add missing default categories here.
   // Users can customise their category set (add/edit/delete) in Settings, and
   // deleted categories must stay deleted across reloads.
+  if (!existing.currency) {
+    existing.currency = DEFAULT_CURRENCY;
+    await writeRaw(existing);
+  }
   return existing;
 }
 
 export const store = {
+  async getCurrency(): Promise<string> {
+    const db = await loadDB();
+    return db.currency || DEFAULT_CURRENCY;
+  },
+
+  async setCurrency(code: string): Promise<string> {
+    const db = await loadDB();
+    db.currency = code.trim().toUpperCase() || DEFAULT_CURRENCY;
+    await writeRaw(db);
+    return db.currency;
+  },
+
   async getCategories(): Promise<Category[]> {
     const db = await loadDB();
     return [...db.categories].sort((a, b) => a.sort_order - b.sort_order);
@@ -299,6 +329,7 @@ export const store = {
       version: 1,
       exportedAt: now(),
       data: {
+        currency: data.currency || DEFAULT_CURRENCY,
         categories: [...data.categories],
         months: [...data.months],
         budgets: [...data.budgets],
@@ -309,6 +340,7 @@ export const store = {
 
   async importDB(backup: unknown): Promise<void> {
     const parsed = parseBackup(backup);
+    if (!parsed.data.currency) parsed.data.currency = DEFAULT_CURRENCY;
     await writeRaw(parsed.data);
   },
 };

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Save, Wallet, PiggyBank, CheckCircle2, XCircle } from 'lucide-react';
 import type { Category, Month, Budget, Expense } from '../types';
-import { fmtNum, toRaw, AMOUNT_RE, formatAmountInput } from '../lib/format';
+import { fmtNum, toRaw, AMOUNT_RE, formatAmountInput, money } from '../lib/format';
 
 interface Props {
   year: number;
@@ -10,13 +10,14 @@ interface Props {
   categories: Category[];
   budgets: Budget[];
   expenses: Expense[];
+  currency: string;
   onSaveIncome: (income: number, budgetAmount: number) => Promise<void>;
   onSaveBudget: (categoryId: string, amount: number) => Promise<void>;
 }
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-export default function BudgetSetup({ year, month, monthData, categories, budgets, expenses, onSaveIncome, onSaveBudget }: Props) {
+export default function BudgetSetup({ year, month, monthData, categories, budgets, expenses, currency, onSaveIncome, onSaveBudget }: Props) {
   const paidCategoryIds = useMemo(() => new Set(expenses.map(e => e.category_id)), [expenses]);
   const [income, setIncome] = useState('');
   const [budgetAmount, setBudgetAmount] = useState('');
@@ -110,7 +111,7 @@ export default function BudgetSetup({ year, month, monthData, categories, budget
             <div>
               <div className="flex items-center gap-2 mb-1.5">
                 <Wallet className="w-3.5 h-3.5 text-cyan-400" />
-                <label className="text-xs text-white/60 font-medium">Income for the Month (LKR)</label>
+                <label className="text-xs text-white/60 font-medium">Income for the Month ({currency})</label>
               </div>
               <input
                 type="text"
@@ -125,7 +126,7 @@ export default function BudgetSetup({ year, month, monthData, categories, budget
             <div>
               <div className="flex items-center gap-2 mb-1.5">
                 <PiggyBank className="w-3.5 h-3.5 text-emerald-400" />
-                <label className="text-xs text-white/60 font-medium">Budget for the Month (LKR)</label>
+                <label className="text-xs text-white/60 font-medium">Budget for the Month ({currency})</label>
               </div>
               <input
                 type="text"
@@ -218,14 +219,14 @@ export default function BudgetSetup({ year, month, monthData, categories, budget
         <div className="glass rounded-2xl p-4 mb-1">
           <div className="flex justify-between text-xs mb-1.5">
             <span className="text-white/50">Total Allocated</span>
-            <span className="text-white font-semibold">LKR {fmtNum(totalCategoryBudget)}</span>
+            <span className="text-white font-semibold">{money(totalCategoryBudget, currency, false)}</span>
           </div>
           {budgetVal > 0 && (
             <>
               <div className="flex justify-between text-xs mb-2">
                 <span className="text-white/50">Unallocated</span>
                 <span className={`font-semibold ${unallocated >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  LKR {fmtNum(Math.abs(unallocated))} {unallocated < 0 ? 'over' : ''}
+                  {money(Math.abs(unallocated), currency, false)} {unallocated < 0 ? 'over' : ''}
                 </span>
               </div>
               <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>

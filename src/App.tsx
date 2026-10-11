@@ -5,7 +5,7 @@ import BudgetSetup from './components/BudgetSetup';
 import AddExpense from './components/AddExpense';
 import ExpensesList from './components/ExpensesList';
 import Settings from './components/Settings';
-import { useCategories, useMonth, useBudgets, useExpenses } from './hooks';
+import { useCategories, useMonth, useBudgets, useExpenses, useCurrency } from './hooks';
 import { store } from './lib/storage';
 import type { ExpensoBackup } from './lib/storage';
 import type { View } from './types';
@@ -18,6 +18,7 @@ export default function App() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [view, setView] = useState<View>('dashboard');
 
+  const { currency, setCurrency } = useCurrency();
   const { categories, addCategory, updateCategory, deleteCategory, resetCategories } = useCategories();
   const { monthData, upsertMonth } = useMonth(year, month);
   const { budgets, upsertBudget, refetch: refetchBudgets } = useBudgets(monthData?.id ?? null);
@@ -125,6 +126,7 @@ export default function App() {
             categories={categories}
             budgets={budgets}
             expenses={expenses}
+            currency={currency}
             onSetupMonth={() => setView('budget')}
           />
         )}
@@ -136,6 +138,7 @@ export default function App() {
             categories={categories}
             budgets={budgets}
             expenses={expenses}
+            currency={currency}
             onSaveIncome={handleSaveIncome}
             onSaveBudget={handleSaveBudget}
           />
@@ -144,6 +147,7 @@ export default function App() {
           <AddExpense
             month={monthData}
             categories={categories}
+            currency={currency}
             onAdd={handleAddExpense}
             onAddCategory={addCategory}
             onSetupFirst={() => setView('budget')}
@@ -155,6 +159,7 @@ export default function App() {
             categories={categories}
             budgets={budgets}
             expenses={expenses}
+            currency={currency}
             onUpdate={updateExpense}
             onDelete={deleteExpense}
           />
@@ -162,6 +167,8 @@ export default function App() {
         {view === 'settings' && (
           <Settings
             categories={categories}
+            currency={currency}
+            onSetCurrency={setCurrency}
             onAddCategory={addCategory}
             onUpdateCategory={updateCategory}
             onDeleteCategory={handleDeleteCategory}

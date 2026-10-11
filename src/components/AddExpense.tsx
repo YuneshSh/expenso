@@ -1,11 +1,12 @@
 import { useState, FormEvent } from 'react';
 import { Plus, X, Calendar, Check } from 'lucide-react';
 import type { Category, Month } from '../types';
-import { fmtNum, toRaw, AMOUNT_RE, formatAmountInput } from '../lib/format';
+import { toRaw, AMOUNT_RE, formatAmountInput, money } from '../lib/format';
 
 interface Props {
   month: Month | null;
   categories: Category[];
+  currency: string;
   onAdd: (categoryId: string, amount: number, description: string, date: string) => Promise<unknown>;
   onAddCategory: (name: string, color: string) => Promise<Category>;
   onSetupFirst: () => void;
@@ -20,7 +21,7 @@ function handleNumInput(value: string, setter: (v: string) => void) {
   }
 }
 
-export default function AddExpense({ month, categories, onAdd, onAddCategory, onSetupFirst }: Props) {
+export default function AddExpense({ month, categories, currency, onAdd, onAddCategory, onSetupFirst }: Props) {
   const today = new Date().toISOString().split('T')[0];
   const [categoryId, setCategoryId] = useState('');
   const [amount, setAmount] = useState('');
@@ -252,7 +253,7 @@ export default function AddExpense({ month, categories, onAdd, onAddCategory, on
           </div>
         ) : (
           <div className="glass rounded-2xl p-3">
-            <label className="text-xs text-white/50 mb-1.5 block">Amount (LKR)</label>
+            <label className="text-xs text-white/50 mb-1.5 block">Amount ({currency})</label>
             <input
               type="text"
               inputMode="numeric"
@@ -277,7 +278,7 @@ export default function AddExpense({ month, categories, onAdd, onAddCategory, on
           <div className="glass rounded-2xl px-3 py-2 flex justify-between text-xs">
             <span className="text-white/50">Total this entry</span>
             <span className="text-cyan-400 font-semibold">
-              LKR {fmtNum(subTotal)}
+              {money(subTotal, currency, false)}
             </span>
           </div>
         )}

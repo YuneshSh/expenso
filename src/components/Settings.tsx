@@ -1,11 +1,14 @@
-import { useState, useRef } from 'react';
-import { Plus, Trash2, Check, X, Pencil, RotateCcw, Tag, Download, Upload, HardDrive } from 'lucide-react';
+import { useState, useRef, useMemo } from 'react';
+import { Plus, Trash2, Check, X, Pencil, RotateCcw, Tag, Download, Upload, HardDrive, Coins } from 'lucide-react';
 import type { Category } from '../types';
 import type { ExpensoBackup } from '../lib/storage';
 import { parseBackup } from '../lib/storage';
+import { listCurrencies, currencyLabel } from '../lib/currencies';
 
 interface Props {
   categories: Category[];
+  currency: string;
+  onSetCurrency: (code: string) => Promise<string>;
   onAddCategory: (name: string, color: string) => Promise<Category>;
   onUpdateCategory: (
     id: string,
@@ -33,6 +36,8 @@ function backupFilename() {
 
 export default function Settings({
   categories,
+  currency,
+  onSetCurrency,
   onAddCategory,
   onUpdateCategory,
   onDeleteCategory,
@@ -40,10 +45,27 @@ export default function Settings({
   onExport,
   onImport,
 }: Props) {
+  const currencies = useMemo(() => listCurrencies(), []);
+  const [savingCurrency, setSavingCurrency] = useState(false);
+  const [currencyMsg, setCurrencyMsg] = useState('');
+
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState(PALETTE[0]);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
+
+  const handleCurrencyChange = async (code: string) => {
+    setSavingCurrency(true);
+    setCurrencyMsg('');
+    try {
+      await onSetCurrency(code);
+      setCurrencyMsg(`Currency set to ${code}`);
+      setTimeout(() => setCurrencyMsg(''), 2000);
+    } catch {
+      setCurrencyMsg('Could not save currency');
+    }
+    setSavingCurrency(false);
+  };
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -168,6 +190,28 @@ export default function Settings({
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-3 pb-8 flex flex-col gap-3">
+        {/* Currency */}
+        <div className="glass rounded-2xl p-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Coins className="w-3 h-3 text-white/50" />
+            <p className="text-xs text-white/60 font-medium">Currency</p>
+          </div>
+          <p className="text-[11px] text-white/35 leading-relaxed mb-2.5">
+            Used everywhere amounts are shown. Changing currency only updates the label — existing numbers stay the same.
+          </p>
+          <select
+            className="input-dark w-full rounded-xl px-3 py-2 text-sm"
+            value={currency}
+            disabled={savingCurrency}
+            onChange={e => handleCurrencyChange(e.target.value)}
+          >
+            {currencies.map(code => (
+              <option key={code} value={code}>{currencyLabel(code)}</option>
+            ))}
+          </select>
+          {currencyMsg && <p className="text-emerald-400 text-xs mt-2">{currencyMsg}</p>}
+        </div>
+
         {/* Backup & Restore */}
         <div className="glass rounded-2xl p-3">
           <div className="flex items-center gap-1.5 mb-2">

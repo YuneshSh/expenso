@@ -1,13 +1,14 @@
 import { useState, useMemo } from 'react';
 import { Trash2, ChevronDown, ChevronRight, Search, Pencil, Check, X } from 'lucide-react';
 import type { Category, Month, Budget, Expense } from '../types';
-import { fmtFull, toRaw, AMOUNT_RE, formatAmountInput, amountToInput } from '../lib/format';
+import { fmtFull, toRaw, AMOUNT_RE, formatAmountInput, amountToInput, money } from '../lib/format';
 
 interface Props {
   month: Month | null;
   categories: Category[];
   budgets: Budget[];
   expenses: Expense[];
+  currency: string;
   onUpdate: (
     id: string,
     updates: Partial<Pick<Expense, 'category_id' | 'amount' | 'description' | 'date'>>
@@ -22,7 +23,7 @@ interface EditDraft {
   date: string;
 }
 
-export default function ExpensesList({ month, categories, budgets, expenses, onUpdate, onDelete }: Props) {
+export default function ExpensesList({ month, categories, budgets, expenses, currency, onUpdate, onDelete }: Props) {
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -103,7 +104,7 @@ export default function ExpensesList({ month, categories, budgets, expenses, onU
       <div className="px-4 pt-3 pb-2 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <div className="flex justify-between items-baseline">
           <h2 className="text-sm font-semibold text-white">Expenses</h2>
-          <span className="text-xs text-white/40">LKR {fmtFull(totalSpent)} total</span>
+          <span className="text-xs text-white/40">{money(totalSpent, currency)} total</span>
         </div>
         <div className="mt-2 relative">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-white/30" />
@@ -138,7 +139,7 @@ export default function ExpensesList({ month, categories, budgets, expenses, onU
                 <span className="flex-1 text-left text-sm font-medium text-white/90 truncate">{group.category.name}</span>
                 {over && <span className="text-xs text-red-400 font-medium">Over</span>}
                 <span className="text-xs text-white/50 flex-shrink-0">
-                  LKR {fmtFull(group.total)}
+                  {money(group.total, currency)}
                   {group.expected > 0 && <span className="text-white/30"> / {fmtFull(group.expected)}</span>}
                 </span>
                 {isOpen ? <ChevronDown className="w-3.5 h-3.5 text-white/30" /> : <ChevronRight className="w-3.5 h-3.5 text-white/30" />}
